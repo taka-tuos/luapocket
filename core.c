@@ -5,6 +5,10 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 
+#include "lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
+
 SDL_Joystick *joy;
 
 void gfxUpdate(void)
@@ -26,6 +30,7 @@ void gfxInitialize(int width, int height)
 	gfxSetView2D(width, height);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
 void gfxFramerateAdjust(void)
@@ -102,6 +107,30 @@ void gfxAtlasInit()
 	glEnable(GL_TEXTURE_2D);
 }
 
+int gfxDrawRect(lua_State *L) {
+	int x = lua_tonumber(L, 1);
+	int y = lua_tonumber(L, 2);
+	int ud = lua_tonumber(L, 3);
+	int vd = lua_tonumber(L, 4);
+	int wd = lua_tonumber(L, 5);
+	int hd = lua_tonumber(L, 6);
+	
+	float u = atlas_1dot * (float)ud;
+	float v = atlas_1dot * (float)vd;
+	float w = atlas_1dot * (float)wd;
+	float h = atlas_1dot * (float)hd;
+	
+	glBindTexture(GL_TEXTURE_2D, atlas_texture);
+	glBegin(GL_QUADS);
+	glTexCoord2f(u    , v    ); glVertex2f(x     , y     );
+	glTexCoord2f(u    , v + h);	glVertex2f(x     , y + hd);
+	glTexCoord2f(u + w, v + h);	glVertex2f(x + wd, y + hd);
+	glTexCoord2f(u + w, v    );	glVertex2f(x + wd, y     );
+	glEnd();
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	SDL_Event sdl_event;
@@ -159,22 +188,23 @@ int main(int argc, char *argv[])
 	Mix_OpenAudio(11025,AUDIO_U8,2,128); 
 	
 	gfxAtlasInit();
+	
+	lua_State *L = luaL_newstate();
+	luaL_openlibs(L);
+	luaL_loadfile(L, "game.lua");
+	lua_pcall(L, 0, 0, 0);
+	
+	lua_register(L, "gfxDrawRect", &gfxDrawRect);
 
 	while (1) {
 		gfxFramerateAdjust();
 		Uint8 *key = SDL_GetKeyState(NULL);
 		
-		int w = atlas_w;
-		int h = atlas_h;
+		glClear(GL_COLOR_BUFFER_BIT);
 		
-		glBindTexture(GL_TEXTURE_2D, atlas_texture);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0, 0); glVertex2f(0	, 0		);
-		glTexCoord2f(0, 1);	glVertex2f(0	, 0 + h);
-		glTexCoord2f(1, 1);	glVertex2f(0 + w, 0 + h);
-		glTexCoord2f(1, 0);	glVertex2f(0 + w, 0		);
-		glEnd();
-
+		lua_getglobal(L, "onFrame");
+		lua_pcall(L, 0, 0, 0);
+		
 		gfxUpdate();
 
 		sysPollEvent(&sdl_event);
