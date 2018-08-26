@@ -192,7 +192,11 @@ int main(int argc, char *argv[])
 	lua_State *L = luaL_newstate();
 	luaL_openlibs(L);
 	luaL_loadfile(L, "game.lua");
-	lua_pcall(L, 0, 0, 0);
+	int result = lua_pcall(L, 0, 0, 0);
+	if (result) {
+		puts(lua_tostring(L, lua_gettop(L)));
+		return 1;
+	}
 	
 	lua_register(L, "gfxDrawRect", &gfxDrawRect);
 
@@ -203,7 +207,11 @@ int main(int argc, char *argv[])
 		glClear(GL_COLOR_BUFFER_BIT);
 		
 		lua_getglobal(L, "onFrame");
-		lua_pcall(L, 0, 0, 0);
+		result = lua_pcall(L, 0, 0, 0);
+		if (result) {
+			puts(lua_tostring(L, lua_gettop(L)));
+			return 1;
+		}
 		
 		gfxUpdate();
 
