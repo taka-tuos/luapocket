@@ -11,6 +11,7 @@
 
 SDL_Joystick *joy;
 
+
 void gfxUpdate(void)
 {
 	glFlush();
@@ -107,28 +108,49 @@ void gfxAtlasInit()
 	glEnable(GL_TEXTURE_2D);
 }
 
-int gfxDrawRect(lua_State *L) {
-	int x = lua_tonumber(L, 1);
-	int y = lua_tonumber(L, 2);
-	int ud = lua_tonumber(L, 3);
-	int vd = lua_tonumber(L, 4);
-	int wd = lua_tonumber(L, 5);
-	int hd = lua_tonumber(L, 6);
+int luaDrawSprite(lua_State *L)
+{
+	float x = lua_tonumber(L, 1);
+	float y = lua_tonumber(L, 2);
+	float ud = lua_tonumber(L, 3);
+	float vd = lua_tonumber(L, 4);
+	float wd = lua_tonumber(L, 5);
+	float hd = lua_tonumber(L, 6);
+	float wd2 = lua_type(L, 7) == LUA_TNUMBER ? lua_tonumber(L, 7) : wd;
+	float hd2 = lua_type(L, 8) == LUA_TNUMBER ? lua_tonumber(L, 8) : hd;
 	
 	float u = atlas_1dot * (float)ud;
 	float v = atlas_1dot * (float)vd;
 	float w = atlas_1dot * (float)wd;
 	float h = atlas_1dot * (float)hd;
 	
+	float p = wd2;
+	float q = hd2;
+	
 	glBindTexture(GL_TEXTURE_2D, atlas_texture);
 	glBegin(GL_QUADS);
-	glTexCoord2f(u    , v    ); glVertex2f(x     , y     );
-	glTexCoord2f(u    , v + h);	glVertex2f(x     , y + hd);
-	glTexCoord2f(u + w, v + h);	glVertex2f(x + wd, y + hd);
-	glTexCoord2f(u + w, v    );	glVertex2f(x + wd, y     );
+	glTexCoord2f(u    , v    ); glVertex2f(x    , y    );
+	glTexCoord2f(u    , v + h); glVertex2f(x    , y + q);
+	glTexCoord2f(u + w, v + h); glVertex2f(x + p, y + q);
+	glTexCoord2f(u + w, v    ); glVertex2f(x + p, y    );
 	glEnd();
 
 	return 0;
+}
+
+int joy_assign[] = {
+	SDLK_UP, SDLK_DOWN, SDLK_RIGHT, SDLK_LEFT,
+	SDLK_z, SDLK_x, SDLK_c, SDLK_v
+};
+
+int luaGetJoyState(lua_State *L)
+{
+	int k = lua_tonumber(L, 1);
+	const Uint8 *state = SDL_GetKeyState(NULL);
+	
+	lua_pushinteger(L, state[joy_assign[k]]);
+	
+	return 1;
 }
 
 int main(int argc, char *argv[])
@@ -159,8 +181,8 @@ int main(int argc, char *argv[])
 		sysQuitProgram(1);
 	}
 
-	width = 240;
-	height = 160;
+	width = 640;
+	height = 480;
 	bpp = info->vfmt->BitsPerPixel;
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -179,7 +201,7 @@ int main(int argc, char *argv[])
 	
 	glewInit();
 
-	gfxInitialize(width, height);
+	gfxInitialize(width/2, height/2);
 
 	sdl_screen = SDL_GetVideoSurface();
 
@@ -198,7 +220,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	lua_register(L, "gfxDrawRect", &gfxDrawRect);
+	lua_register(L, "DrawSprite", &luaDrawSprite);
+	lua_register(L, "GetJoyState", &luaGetJoyState);
 
 	while (1) {
 		gfxFramerateAdjust();
