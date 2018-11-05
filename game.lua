@@ -1,129 +1,182 @@
-local x,y,vx,vy = 320/2-16,240-32,0,0
+local Xuyo = {}
 
-local xoff = 0
+local _width = 12
+local _height = 12
+local _vanish = 4
+local _color = 5
+local _field = {}
 
-local bpos = {}
+local _nullblock = {}
+_nullblock.nColor = 0
+_nullblock.nVanish = 0
 
-local bt = 0
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
-local epos = {}
-local et = 0
+function onInit()
+	local i,j
+	
+	for i=1,_width do
+		_field[i] = {}
+		for j=1,_height do
+			print(i,j)
+			_field[i][j] = {}
+			_field[i][j].nVanish = 0
+			_field[i][j].nColor = math.floor(math.random(5))
+		end
+	end
+	
+	for i=1,_height do
+		for j=1,_width do
+			print(_field[i][j].nColor)
+		end
+	end
+end
 
-local fpos = {}
+function Xuyo.Check()
+	local nX = 0
+	local nY = 0
+	local nReturn = false
+	local stDummy
 
-local btd = 6
-local btk = 0
+	for nX = 1,_width do
+		for nY = 1,_height do
+			if _field[nX][nY].nColor ~= 0 then
+				_field[nX][nY].nVanish = 0
+
+				stDummy = deepcopy(_field)
+
+				_field[nX][nY].nVanish, stDummy = Xuyo.Count(stDummy, nX, nY, _field[nX][nY].nVanish);
+
+				if _field[nX][nY].nVanish >= _vanish then
+					nReturn = true
+				end
+			end
+		end
+	end
+
+	return nReturn
+end
+
+function Xuyo.Count(pField, nX, nY, pCount)
+	local nColor = pField[nX][nY].nColor
+
+	pField[nX][nY] = {}
+	pField[nX][nY].nVanish = 0
+	pField[nX][nY].nColor = 0
+
+	pCount = pCount + 1
+
+	if nY - 1 >= 1 and nColor == pField[nX][nY - 1].nColor then
+		pCount, pField = Xuyo.Count(pField, nX, nY - 1, pCount)
+	end
+
+	if nY + 1 <= _height and nColor == pField[nX][nY + 1].nColor then
+		pCount, pField = Xuyo.Count(pField, nX, nY + 1, pCount)
+	end
+
+	if nX - 1 > 0 and nColor == pField[nX - 1][nY].nColor then
+		pCount, pField = Xuyo.Count(pField, nX - 1, nY, pCount)
+	end
+
+	if nX + 1 <= _width and nColor == pField[nX + 1][nY].nColor then
+		pCount, pField = Xuyo.Count(pField, nX + 1, nY, pCount);
+	end
+	
+	return pCount, pField
+end
+
+function Xuyo.Slide()
+	local nX = 0
+	local nY = 0
+	local nReturn = false
+
+	for nY = _height,2,-1 do
+		for nX = 1,_width do
+			print (nX,nY)
+			if _field[nX][nY].nColor == 0 and _field[nX][nY - 1].nColor ~= 0 then
+				_field[nX][nY] = _field[nX][nY - 1]
+
+				_field[nX][nY - 1] = {}
+				_field[nX][nY - 1].nVanish = 0
+				_field[nX][nY - 1].nColor = 0
+
+				nReturn = true
+			end
+		end
+	end
+
+	return nReturn
+end
+
+function Xuyo.Vanish()
+	local nX = 0
+	local nY = 0
+	
+	local en = 0
+
+	for nX = 1,_width do
+		for nY = 1,_height do
+			if _field[nX][nY].nVanish >= _vanish then
+				print(_field[nX][nY].nVanish)
+				_field[nX][nY] = {}
+				_field[nX][nY].nVanish = 0
+				_field[nX][nY].nColor = 0
+				
+				en = en + 1
+			end
+		end
+	end
+	
+	return en
+end
+
+function RenderChar(v, x, y)
+	DrawSprite(x, y, math.mod(v,16) * 8, math.floor(v / 16) * 8, 8, 8, 16, 16)
+end
+
+function RenderBlock(v, x, y)
+	DrawSprite(x, y, math.mod(v,4) * 64, 128 + math.floor(v / 4) * 64, 64, 64, 16, 16)
+end
+
+local cnt0 = 0
+local cnt1 = 0
+local cnt2 = 0
 
 function onFrame()
-	DrawSprite(x, y, 96 + xoff * 32, 0, 32, 32)
-	
-	vy = GetJoyState(1) - GetJoyState(0)
-	vx = GetJoyState(2) - GetJoyState(3)
-	
-	if GetJoyState(3) == 1 then
-		if xoff > -2 then xoff = xoff - 1 end
-	elseif GetJoyState(2) == 1 then
-		if xoff < 2 then xoff = xoff + 1 end
-	else
-		if xoff < 0 then xoff = xoff + 1 end
-		if xoff > 0 then xoff = xoff - 1 end
-	end
-	
-	if GetJoyState(4) == 1 and bt == 0 then
-		local posA = {}
-		local posB = {}
-		posA.x = x - 6 + 12
-		posA.y = y 
-		posB.x = x + 6 + 12
-		posB.y = y
-		
-		table.insert(bpos, posA)
-		table.insert(bpos, posB)
-		
-		bt = 3
-	end
-	
-	local btk_1 = 16
-	local btk_2 = 240
-	local btk_3 = 6
-	
-	if btk ~= 0 then
-		btk_1 = 32
-		btk_2 = 256
-		btk_3 = 7
-	end
-	
-	if et == 0 then
-		local pos = {}
-		pos.x = math.random(320-32) + 7
-		pos.y = -16
-		
-		table.insert(epos, pos)
-		
-		et = 1
-	end
-	
-	for idx, pos in ipairs(bpos) do
-		pos.y = pos.y - 8
-		local bl = false
-		
-		for idx_e, pos_e in ipairs(epos) do
-			if pos_e.x >= pos.x - 16 and pos_e.x <= pos.x + 8 and
-			   pos_e.y >= pos.y - 16 and pos_e.y <= pos.y + 16
-			then
-				table.remove(epos, idx_e)
-				table.remove(bpos, idx)
-				bl = true
-				local pos_f = {}
-				pos_f.x = pos_e.x - (btk_1 / 2) + 4
-				pos_f.y = pos_e.y - (btk_1 / 2) + 8
-				pos_f.t = 0
-				table.insert(fpos, pos_f)
-			end
-			if bl then break end
-		end
-		
-		if not bl then
-			if pos.y < -16 then 
-				table.remove(bpos, idx)
-			else
-				DrawSprite(pos.x, pos.y, 88, 32, 8, 16)
-				bpos[idx] = pos
+	local i,j
+	for i=1,_width do
+		for j=1,_height do
+			if _field[i][j].nColor > 0 then
+				RenderBlock(_field[i][j].nColor-1,i*16,j*16)
 			end
 		end
 	end
 	
-	for idx, pos in ipairs(epos) do
-		pos.y = pos.y + 1
-		if pos.y > 240 then 
-			table.remove(epos, idx)
-		else
-			DrawSprite(pos.x, pos.y, 144, 208, 16, 16)
-			epos[idx] = pos
+	cnt0 = cnt0 + 1
+	
+	if cnt0 == 30 then
+		cnt0 = 0
+		
+		if not Xuyo.Slide() then
+			while true do
+				if not Xuyo.Check() then
+					break
+				end
+				Xuyo.Vanish()
+			end
 		end
 	end
-	
-	for idx, pos in ipairs(fpos) do
-		if pos.t == btk_3*btd then
-			table.remove(fpos, idx)
-		else
-			DrawSprite(pos.x, pos.y, math.floor(pos.t/btd) * btk_1, btk_2, btk_1, btk_1)
-			pos.t = pos.t + 1
-			fpos[idx] = pos
-		end
-	end
-	
-	--DrawSprite(0, 0, 144, 208, 16, 16)
-	
-	
-	x = x + vx * 2
-	y = y + vy * 2
-	
-	if x < 0 then x = 0 end
-	if x > 320-32 then x = 320-32 end
-	if y < 0 then y = 0 end
-	if y > 240-32 then y = 240-32 end 
-	
-	if bt > 0 then bt = bt - 1 end
-	if et > 0 then et = et - 1 end
 end

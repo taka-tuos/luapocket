@@ -211,6 +211,8 @@ int main(int argc, char *argv[])
 	
 	gfxAtlasInit();
 	
+	puts("Program loading");
+	
 	lua_State *L = luaL_newstate();
 	luaL_openlibs(L);
 	luaL_loadfile(L, "game.lua");
@@ -220,8 +222,19 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
+	puts("Program initializing");
+	
+	lua_getglobal(L, "onInit");
+	result = lua_pcall(L, 0, 0, 0);
+	if (result) {
+		puts(lua_tostring(L, lua_gettop(L)));
+		return 1;
+	}
+	
 	lua_register(L, "DrawSprite", &luaDrawSprite);
 	lua_register(L, "GetJoyState", &luaGetJoyState);
+
+	puts("Program Runninng");
 
 	while (1) {
 		gfxFramerateAdjust();
