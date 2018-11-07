@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 	
 	glewInit();
 
-	gfxInitialize(width/2, height/2);
+	gfxInitialize(width, height);
 
 	sdl_screen = SDL_GetVideoSurface();
 
