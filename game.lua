@@ -1,6 +1,6 @@
 local Xuyo = {}
 
-local _width = 12
+local _width = 6
 local _height = 12
 local _vanish = 4
 local _color = 5
@@ -78,6 +78,7 @@ function Xuyo.Slide()
 	local nX = 0
 	local nY = 0
 	local nReturn = false
+	local nReturnB = false
 
 	for nY = _height,2,-1 do
 		for nX = 1,_width do
@@ -91,11 +92,13 @@ function Xuyo.Slide()
 				_field[nX][nY - 1].onControl = 0
 
 				nReturn = true
+
+				if _field[nX][nY].onControl == 0 then nReturnB = true end
 			end
 		end
 	end
 
-	return nReturn
+	return nReturn, nReturnB
 end
 
 function Xuyo.Vanish()
@@ -103,22 +106,26 @@ function Xuyo.Vanish()
 	local nY = 0
 	
 	local en = 0
+	
+	local l = {0,0,0,0,0}
+	local m = {0,0,0,0,0}
 
 	for nX = 1,_width do
 		for nY = 1,_height do
 			if _field[nX][nY].nVanish >= _vanish then
 				--print(_field[nX][nY].nVanish)
+				l[_field[nX][nY].nColor] = 1
+				m[_field[nX][nY].nColor] = _field[nX][nY].nVanish
 				_field[nX][nY] = {}
 				_field[nX][nY].nVanish = 0
 				_field[nX][nY].nColor = 0
 				_field[nX][nY].onControl = 0
-				
 				en = en + 1
 			end
 		end
 	end
 	
-	return en
+	return en, l[1]+l[2]+l[3]+l[4]+l[5], deepcopy(m)
 end
 
 function RenderChar(v, x, y, s)
@@ -387,6 +394,14 @@ end
 
 local roted = false
 
+local score = 0
+local combo = 0
+
+local combolist = { 0, 8, 16, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480, 512 }
+local jointlist = { 0, 2, 3, 4, 5, 6, 7, 10 }
+
+local pressed = false
+
 function onFrame()
 	DrawSprite(32, 32, 128, 32, _width, _height, _width*32, _height*32)
 	
@@ -406,7 +421,7 @@ function onFrame()
 	local vxL = GetJoyState(3)
 	
 	for i=1,_width do
-		if math.mod(cnt0,3) ~= 0 then break end
+		if pressed then break end
 		for j=1,_height do
 			if not moved then
 				if _field[i][j].onControl == 1 then
@@ -477,22 +492,61 @@ function onFrame()
 		end
 	end
 	
+	if vy + vxR + vxL ~= 0 then
+		pressed = true
+	else
+		pressed = false
+	end
+	
 	RenderString("N E X T", 640-160, 64) 
+	
+	RenderString(string.format("%08d(%02d)",score,combo), 640-192, 32) 
 	
 	RenderBlock(randN1-1, 640-160+40, 64+32, 0) 
 	RenderBlock(randN2-1, 640-160+40, 64+32+32, 0) 
 	
 	cnt0 = cnt0 + 1
+	if pressed then cnt1 = cnt1 + 1
+	else cnt1 = 0 end
+	
+	if cnt1 == 12 then
+		cnt1 = 0
+		pressed = false
+	end
 	
 	if cnt0 == 30 then
 		cnt0 = 0
 		
-		if not Xuyo.Slide() then
+		local a,b = Xuyo.Slide()
+		local c = false
+		
+		if not b then
+			if Xuyo.Check() then
+				combo = combo + 1
+				local n,v,w = Xuyo.Vanish()
+				local jb = 0
+				local k
+				for k=1,5 do
+					if w[k] >= 4 then
+						jb = jb + jointlist[math.min(w[k]-4+1,8)]
+					end
+				end
+				local cb = combolist[math.min(combo,19)]
+				local d = cb + jb + v
+				if d == 0 then d = 1 end
+				score = score + n * d * 10
+				c = true
+			end
+		end
+		
+		if not a and not b and not c then
 			for i=1,_width do
 				for j=1,_height do
 					_field[i][j].onControl = 0
 				end
 			end
+			
+			combo = 0
 			
 			_field[_width/2][1].onControl = 1
 			_field[_width/2][2].onControl = 2
@@ -501,13 +555,6 @@ function onFrame()
 			_field[_width/2][2].nColor = randN2
 			
 			nextRandom()
-			
-			while true do
-				if not Xuyo.Check() then
-					break
-				end
-				Xuyo.Vanish()
-			end
 		end
 	end
 end
