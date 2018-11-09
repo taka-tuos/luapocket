@@ -148,6 +148,7 @@ end
 local cnt0 = 0
 local cnt1 = 0
 local cnt2 = 0
+local over = false
 
 local randN1 = 0
 local randN2 = 0
@@ -167,6 +168,14 @@ end
 
 function onInit()
 	local i,j
+	
+	score = 0
+	combo = 0
+	cnt0 = 0
+	cnt1 = 0
+	cnt2 = 0
+	
+	over = false
 	
 	for i=1,_width do
 		_field[i] = {}
@@ -414,6 +423,16 @@ function onFrame()
 		end
 	end
 	
+	RenderString(string.format("%08d(%02d)",score,combo), 640-192, 32) 
+	
+	if over then
+		RenderString("GAME OVER", 640-160, 64) 
+		if GetJoyState(5) == 1 then
+			onInit()
+		end
+		return
+	end
+	
 	local moved = false
 	
 	local vy = GetJoyState(1)
@@ -500,8 +519,6 @@ function onFrame()
 	
 	RenderString("N E X T", 640-160, 64) 
 	
-	RenderString(string.format("%08d(%02d)",score,combo), 640-192, 32) 
-	
 	RenderBlock(randN1-1, 640-160+40, 64+32, 0) 
 	RenderBlock(randN2-1, 640-160+40, 64+32+32, 0) 
 	
@@ -547,6 +564,10 @@ function onFrame()
 			end
 			
 			combo = 0
+			
+			if _field[_width/2][1].nColor ~= 0 or _field[_width/2][2].nColor ~= 0 then
+				over = true
+			end
 			
 			_field[_width/2][1].onControl = 1
 			_field[_width/2][2].onControl = 2

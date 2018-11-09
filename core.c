@@ -148,7 +148,34 @@ int luaGetJoyState(lua_State *L)
 	int k = lua_tonumber(L, 1);
 	const Uint8 *state = SDL_GetKeyState(NULL);
 	
-	lua_pushinteger(L, state[joy_assign[k]]);
+	int pad = 0;
+	
+	switch(k) {
+		case 0:
+		pad = SDL_JoystickGetAxis(joy,1) < -16384 ? 1 : 0;
+		break;
+		
+		case 1:
+		pad = SDL_JoystickGetAxis(joy,1) > 16384 ? 1 : 0;
+		break;
+		
+		case 2:
+		pad = SDL_JoystickGetAxis(joy,0) > 16384 ? 1 : 0;
+		break;
+		
+		case 3:
+		pad = SDL_JoystickGetAxis(joy,0) < -16384 ? 1 : 0;
+		break;
+		
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		pad = SDL_JoystickGetButton(joy,k-4) ? 1 : 0;
+		break;
+	}
+	
+	lua_pushinteger(L, state[joy_assign[k]] | pad);
 	
 	return 1;
 }
@@ -191,7 +218,7 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
-	flags = SDL_OPENGL;
+	flags = SDL_OPENGL | SDL_FULLSCREEN;
 
 	if(SDL_SetVideoMode(width, height, bpp, flags) == 0) {
 		fprintf(stderr, "Video mode set failed: %s\n",
