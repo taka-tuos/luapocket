@@ -134,7 +134,7 @@ end
 
 function RenderString(sz, x, y, s)
 	if s == nil then s = 16 end
-	local i
+	local iSDL_FULLSCREEN
 	for i=1,string.len(sz) do
 		RenderChar(string.byte(sz, i),x+(i-1)*s,y,s)
 	end
@@ -142,7 +142,7 @@ end
 
 function RenderBlock(v, x, y, b)
 	DrawSprite(x, y, v * 8, 128 + b * 8, 8, 8, 32, 32)
-	--DrawSprite(x, y, 128, 0, 32, 32, 32, 32)
+	DrawSprite(x+4, y+4, 256-24, v * 24, 24, 24, 24, 24)
 end
 
 local cnt0 = 0

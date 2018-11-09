@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
-	flags = SDL_OPENGL | SDL_FULLSCREEN;
+	flags = SDL_OPENGL;
 
 	if(SDL_SetVideoMode(width, height, bpp, flags) == 0) {
 		fprintf(stderr, "Video mode set failed: %s\n",
